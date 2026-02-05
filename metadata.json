@@ -1,0 +1,5 @@
+{
+  "name": "OrbitDine",
+  "description": "A comprehensive restaurant operating system featuring QR ordering, manager floor maps, and owner analytics.",
+  "requestFramePermissions": []
+}

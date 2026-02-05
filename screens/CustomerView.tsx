@@ -1,0 +1,258 @@
+import React, { useState } from 'react';
+import { ShoppingCart, Search, Plus, Minus, X, ChevronRight, Clock, Receipt, UtensilsCrossed, Info, Flame } from 'lucide-react';
+import { CATEGORIES, MENU_ITEMS } from '../mockData';
+import { MenuItem, CartItem } from '../types';
+import { Button } from '../components/Button';
+
+export const CustomerView: React.FC = () => {
+  const [activeCategory, setActiveCategory] = useState<string>(CATEGORIES[0].id);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [view, setView] = useState<'MENU' | 'ORDER_STATUS'>('MENU');
+
+  // Cart Logic
+  const addToCart = (item: MenuItem) => {
+    const existing = cart.find(c => c.id === item.id);
+    if (existing) {
+      updateQuantity(existing.cartId, 1);
+    } else {
+      const newItem: CartItem = {
+        ...item,
+        cartId: Math.random().toString(36).substr(2, 9),
+        quantity: 1,
+      };
+      setCart([...cart, newItem]);
+    }
+  };
+
+  const updateQuantity = (cartId: string, delta: number) => {
+    setCart(prev => prev.map(item => {
+      if (item.cartId === cartId) {
+        return { ...item, quantity: Math.max(0, item.quantity + delta) };
+      }
+      return item;
+    }).filter(item => item.quantity > 0));
+  };
+
+  const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(price);
+  };
+
+  // --- SUB COMPONENTS ---
+
+  const OrderStatusView = () => (
+    <div className="flex flex-col h-full bg-zinc-950 p-6">
+      <div className="max-w-3xl mx-auto w-full">
+        <div className="flex items-center justify-between mb-8 pb-4 border-b border-zinc-800">
+          <div>
+            <h2 className="text-2xl font-bold text-white tracking-tight">Order #1247</h2>
+            <p className="text-zinc-400 text-sm mt-1">Table 5 • Guest: Walk-in</p>
+          </div>
+          <Button variant="outline" onClick={() => setView('MENU')}>Back to Menu</Button>
+        </div>
+
+        <div className="grid gap-6">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 shadow-2xl">
+            <h3 className="text-xl font-bold text-white mb-8 flex items-center gap-2">
+               <Flame className="text-orange-500" size={24} /> Kitchen Status
+            </h3>
+            <div className="relative pl-2">
+              <div className="absolute left-[19px] top-2 bottom-4 w-0.5 bg-zinc-800"></div>
+              <div className="space-y-10">
+                {[
+                  { title: 'Order Received', time: '12:30 PM', active: true, done: true },
+                  { title: 'Sent to Kitchen', time: '12:31 PM', active: true, done: true },
+                  { title: 'Chefs are Cooking', time: '12:35 PM', active: true, done: false },
+                  { title: 'Quality Check', time: '-', active: false, done: false },
+                  { title: 'Served at Table', time: '-', active: false, done: false },
+                ].map((step, i) => (
+                  <div key={i} className="relative flex items-start gap-6">
+                    <div className={`w-10 h-10 rounded-full border-[3px] flex items-center justify-center z-10 transition-colors shadow-lg ${
+                      step.done ? 'bg-teal-500 border-teal-500 text-zinc-900' : 
+                      step.active ? 'bg-zinc-900 border-teal-500 text-teal-500' : 'bg-zinc-900 border-zinc-700 text-zinc-700'
+                    }`}>
+                      {step.done ? <div className="w-3 h-3 bg-zinc-900 rounded-full"/> : <div className={`w-3 h-3 rounded-full ${step.active ? 'bg-teal-500 animate-pulse' : 'bg-zinc-700'}`}/>}
+                    </div>
+                    <div>
+                      <p className={`text-base font-bold ${step.active || step.done ? 'text-white' : 'text-zinc-500'}`}>{step.title}</p>
+                      <p className="text-xs text-zinc-500 mt-1 font-mono">{step.time}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (view === 'ORDER_STATUS') return <OrderStatusView />;
+
+  return (
+    <div className="flex h-screen w-full bg-zinc-950 overflow-hidden text-zinc-200">
+      
+      {/* 1. SIDEBAR NAVIGATION */}
+      <aside className="w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col flex-shrink-0">
+        <div className="h-20 flex items-center px-6 border-b border-zinc-800">
+          <span className="font-bold text-xl text-white tracking-tight flex items-center gap-2">
+            <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center text-zinc-900">
+               <UtensilsCrossed size={18} />
+            </div>
+            OrbitDine
+          </span>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto py-6">
+          <div className="px-6 mb-3">
+            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Menu</h3>
+          </div>
+          <nav className="space-y-1 px-3">
+            {CATEGORIES.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => setActiveCategory(cat.id)}
+                className={`w-full flex items-center justify-between px-4 py-3 text-sm font-semibold rounded-lg transition-all ${
+                  activeCategory === cat.id 
+                    ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20' 
+                    : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 border border-transparent'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span>{cat.name}</span>
+                </div>
+                {activeCategory === cat.id && <ChevronRight size={16} />}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        <div className="p-4 border-t border-zinc-800 bg-zinc-900/50">
+          <button 
+            onClick={() => setView('ORDER_STATUS')}
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors border border-zinc-800 hover:border-zinc-700"
+          >
+            <Clock size={18} className="text-teal-500" />
+            <span>Order Status</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* 2. MAIN CONTENT */}
+      <main className="flex-1 flex flex-col min-w-0 bg-zinc-950">
+        <header className="h-20 flex items-center justify-between px-8 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-sm sticky top-0 z-10">
+          <div>
+            <h1 className="text-2xl font-bold text-white tracking-tight">
+              {CATEGORIES.find(c => c.id === activeCategory)?.name}
+            </h1>
+            <p className="text-sm text-zinc-500">Select items to add to your table</p>
+          </div>
+          <div className="relative w-72">
+            <Search className="absolute left-3 top-3 text-zinc-500" size={18} />
+            <input 
+              type="text" 
+              placeholder="Search dishes..." 
+              className="w-full bg-zinc-900 border border-zinc-800 text-white text-sm rounded-xl pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none placeholder-zinc-600 transition-all"
+            />
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-y-auto p-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {MENU_ITEMS.filter(i => i.category === activeCategory).map(item => (
+              <div key={item.id} className="bg-zinc-900 border border-zinc-800/50 rounded-2xl overflow-hidden hover:border-teal-500/30 hover:shadow-xl hover:shadow-teal-900/10 transition-all group flex flex-col">
+                <div className="aspect-[4/3] bg-zinc-800 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-transparent to-transparent opacity-80 z-10"></div>
+                  <img src={item.image} className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" />
+                  <div className="absolute top-3 right-3 z-20 bg-zinc-950/80 backdrop-blur text-teal-400 text-xs font-bold px-3 py-1 rounded-full border border-zinc-800">
+                    {item.rating} ★
+                  </div>
+                </div>
+                <div className="p-5 flex-1 flex flex-col">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-bold text-zinc-100 text-lg">{item.name}</h3>
+                  </div>
+                  <p className="text-sm text-zinc-400 line-clamp-2 mb-6 flex-1">{item.description}</p>
+                  
+                  <div className="flex items-center justify-between mt-auto">
+                    <span className="font-bold text-xl text-white">{formatPrice(item.price)}</span>
+                    <Button 
+                      size="sm" 
+                      variant="primary"
+                      onClick={() => addToCart(item)}
+                      className="opacity-90 hover:opacity-100"
+                    >
+                      <Plus size={16} className="mr-1"/> Add
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
+
+      {/* 3. RIGHT PANEL - Cart */}
+      <aside className="w-96 bg-zinc-900 border-l border-zinc-800 flex flex-col flex-shrink-0 shadow-2xl z-20">
+        <div className="h-20 flex items-center justify-between px-6 border-b border-zinc-800 bg-zinc-900">
+          <div className="flex items-center gap-3 text-white font-bold text-lg">
+            <div className="p-2 bg-zinc-800 rounded-lg text-teal-500">
+              <Receipt size={20} />
+            </div>
+            <span>Your Order</span>
+          </div>
+          <span className="text-xs font-bold bg-teal-500/10 text-teal-400 px-3 py-1 rounded-full border border-teal-500/20">Table 5</span>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {cart.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-zinc-600 space-y-4">
+              <div className="w-16 h-16 rounded-2xl bg-zinc-800/50 flex items-center justify-center">
+                 <ShoppingCart size={32} strokeWidth={1.5} />
+              </div>
+              <p className="text-sm font-medium">Your cart is empty</p>
+            </div>
+          ) : (
+            cart.map(item => (
+              <div key={item.cartId} className="flex gap-4 p-4 rounded-xl bg-zinc-950/50 border border-zinc-800/50">
+                <div className="flex flex-col items-center gap-1 bg-zinc-900 rounded-lg p-1 h-fit border border-zinc-800">
+                   <button onClick={() => updateQuantity(item.cartId, 1)} className="p-1 text-zinc-400 hover:text-teal-400 hover:bg-zinc-800 rounded"><Plus size={14}/></button>
+                   <span className="font-mono font-bold text-white text-sm">{item.quantity}</span>
+                   <button onClick={() => updateQuantity(item.cartId, -1)} className="p-1 text-zinc-400 hover:text-red-400 hover:bg-zinc-800 rounded"><Minus size={14}/></button>
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between items-start">
+                    <span className="text-zinc-200 font-semibold text-sm">{item.name}</span>
+                    <span className="text-zinc-100 font-bold text-sm">{formatPrice(item.price * item.quantity)}</span>
+                  </div>
+                  {item.modifiers && <p className="text-xs text-zinc-500 mt-1">{item.modifiers.join(', ')}</p>}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="p-6 bg-zinc-900 border-t border-zinc-800 space-y-4 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between text-zinc-400">
+              <span>Subtotal</span>
+              <span>{formatPrice(cartTotal)}</span>
+            </div>
+            <div className="flex justify-between text-zinc-400">
+              <span>Tax (5%)</span>
+              <span>{formatPrice(cartTotal * 0.05)}</span>
+            </div>
+            <div className="flex justify-between text-white font-bold text-xl pt-4 border-t border-zinc-800 mt-2">
+              <span>Total</span>
+              <span className="text-teal-400">{formatPrice(cartTotal * 1.05)}</span>
+            </div>
+          </div>
+          <Button fullWidth size="lg" disabled={cart.length === 0} onClick={() => setView('ORDER_STATUS')} className="font-bold">
+            Confirm Order
+          </Button>
+        </div>
+      </aside>
+    </div>
+  );
+};
