@@ -286,33 +286,36 @@ export const CustomerView: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
             {MENU_ITEMS.filter(i => i.category === activeCategory).map(item => (
-              <div key={item.id} className="flex md:flex-col bg-zinc-900 border border-zinc-800/50 rounded-xl overflow-hidden md:rounded-2xl hover:border-teal-500/30 transition-all group">
-                {/* Image */}
-                <div className="w-24 h-24 md:w-full md:aspect-[4/3] md:h-auto bg-zinc-800 relative flex-shrink-0">
-                  <img src={item.image} className="w-full h-full object-cover transform md:group-hover:scale-105 transition-transform duration-500" />
-                  <div className="absolute top-1 right-1 md:top-3 md:right-3 z-20 bg-zinc-950/80 backdrop-blur text-teal-400 text-[10px] md:text-xs font-bold px-2 py-0.5 rounded-full border border-zinc-800">
-                    {item.rating} ★
-                  </div>
-                </div>
+              <div key={item.id} className="group bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden hover:border-teal-500/50 transition-all flex flex-row md:flex-col md:h-full shadow-sm">
                 
-                {/* Content */}
-                <div className="p-3 md:p-5 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h3 className="font-bold text-zinc-100 text-base md:text-lg mb-1">{item.name}</h3>
-                    <p className="text-xs md:text-sm text-zinc-400 line-clamp-2 mb-2 md:mb-6">{item.description}</p>
-                  </div>
-                  
-                  <div className="flex items-center justify-between mt-auto">
-                    <span className="font-bold text-lg text-white">{formatPrice(item.price)}</span>
-                    <Button 
-                      size="sm" 
-                      variant="primary"
-                      onClick={() => addToCart(item)}
-                      className="h-8 px-3 md:h-10 md:px-5"
-                    >
-                      <Plus size={16} className="md:mr-1"/> <span className="hidden md:inline">Add</span>
-                    </Button>
-                  </div>
+                {/* Image Container - Fixed size on mobile, responsive on desktop */}
+                <div className="w-28 h-28 md:w-full md:h-48 relative flex-shrink-0 bg-zinc-800">
+                   <img src={item.image} className="w-full h-full object-cover md:group-hover:scale-105 transition-transform duration-500" />
+                   <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md text-teal-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-white/10 shadow-sm">
+                      {item.rating} ★
+                   </div>
+                </div>
+  
+                {/* Content Container */}
+                <div className="flex-1 p-3 md:p-5 flex flex-col justify-between min-w-0">
+                   <div className="mb-2">
+                      <h3 className="font-bold text-zinc-100 text-sm md:text-lg leading-tight mb-1 truncate">{item.name}</h3>
+                      <p className="text-[11px] md:text-sm text-zinc-400 line-clamp-2 leading-relaxed">{item.description}</p>
+                   </div>
+  
+                   {/* Action Row - Perfectly aligned at bottom */}
+                   <div className="flex items-center justify-between mt-auto pt-2 border-t border-zinc-800/50 md:border-none md:pt-0">
+                       <span className="font-bold text-base md:text-lg text-white">{formatPrice(item.price)}</span>
+                       
+                       <Button 
+                          size="sm" 
+                          variant="secondary" 
+                          className="h-8 px-4 text-xs font-bold hover:bg-teal-500 hover:text-zinc-900 border-zinc-700 shadow-sm transition-all" 
+                          onClick={() => addToCart(item)}
+                       >
+                          ADD
+                       </Button>
+                   </div>
                 </div>
               </div>
             ))}
