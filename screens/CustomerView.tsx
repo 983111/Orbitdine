@@ -178,10 +178,10 @@ export const CustomerView: React.FC = () => {
   if (view === 'ORDER_STATUS') return <OrderStatusView />;
 
   return (
-    <div className="flex h-[100dvh] w-full bg-zinc-950 overflow-hidden text-zinc-200 font-sans relative">
+    <div className="flex h-full w-full bg-zinc-950 overflow-hidden text-zinc-200 font-sans relative">
       
       {/* 1. DESKTOP SIDEBAR NAVIGATION (Hidden on Mobile) */}
-      <aside className="hidden md:flex w-64 bg-zinc-900 border-r border-zinc-800 flex-col flex-shrink-0">
+      <aside className="hidden md:flex w-64 bg-zinc-900 border-r border-zinc-800 flex-col flex-shrink-0 z-30">
         <div className="h-20 flex items-center px-6 border-b border-zinc-800">
           <span className="font-bold text-xl text-white tracking-tight flex items-center gap-2">
             <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center text-zinc-900">
@@ -227,7 +227,7 @@ export const CustomerView: React.FC = () => {
       </aside>
 
       {/* 2. MAIN CONTENT AREA */}
-      <main className="flex-1 flex flex-col min-w-0 bg-zinc-950 relative">
+      <main className="flex-1 flex flex-col min-w-0 bg-zinc-950 relative h-full">
         
         {/* MOBILE HEADER */}
         <header className="md:hidden h-16 flex items-center justify-between px-4 border-b border-zinc-800 bg-zinc-900 sticky top-0 z-20">
@@ -264,7 +264,7 @@ export const CustomerView: React.FC = () => {
         </header>
 
         {/* MOBILE CATEGORY SCROLLER */}
-        <div className="md:hidden px-4 py-3 bg-zinc-950 overflow-x-auto no-scrollbar flex gap-2 sticky top-16 z-10 border-b border-zinc-800/50">
+        <div className="md:hidden px-4 py-3 bg-zinc-950/90 backdrop-blur-md overflow-x-auto no-scrollbar flex gap-2 sticky top-16 z-10 border-b border-zinc-800/50">
            {CATEGORIES.map(cat => (
              <button
                key={cat.id}
@@ -272,7 +272,7 @@ export const CustomerView: React.FC = () => {
                className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold border transition-colors ${
                  activeCategory === cat.id
                   ? 'bg-teal-500 text-zinc-900 border-teal-500'
-                  : 'bg-zinc-900 text-zinc-400 border-zinc-800'
+                  : 'bg-zinc-900/50 text-zinc-400 border-zinc-800'
                }`}
              >
                {cat.icon} {cat.name}
@@ -350,7 +350,7 @@ export const CustomerView: React.FC = () => {
 
       {/* 4. MOBILE CART OVERLAY (Full Screen Modal) */}
       {isMobileCartOpen && (
-        <div className="md:hidden fixed inset-0 z-50 bg-zinc-950 flex flex-col animate-slide-up">
+        <div className="md:hidden fixed inset-0 z-[100] bg-zinc-950 flex flex-col animate-slide-up">
            <CartContent isMobile={true} />
         </div>
       )}
