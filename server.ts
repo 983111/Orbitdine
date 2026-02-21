@@ -134,6 +134,37 @@ async function startServer() {
     }
   });
 
+  // Get single order status/details
+  app.get('/api/orders/:id', (req, res) => {
+    const { id } = req.params;
+
+    try {
+      const order = db.prepare(`
+        SELECT o.*, t.number as table_number
+        FROM orders o
+        JOIN tables t ON o.table_id = t.id
+        WHERE o.id = ?
+      `).get(id) as any;
+
+      if (!order) {
+        res.status(404).json({ error: 'Order not found' });
+        return;
+      }
+
+      const items = db.prepare(`
+        SELECT oi.*, mi.name
+        FROM order_items oi
+        JOIN menu_items mi ON oi.menu_item_id = mi.id
+        WHERE oi.order_id = ?
+      `).all(id);
+
+      order.items = items;
+      res.json(order);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch order' });
+    }
+  });
+
   // Call Waiter / Bill
   app.post("/api/tables/:id/request", (req, res) => {
     const { type } = req.body; // 'bill' or 'help'

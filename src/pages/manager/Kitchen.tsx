@@ -5,6 +5,14 @@ import { Printer, CheckCircle2 } from 'lucide-react';
 export default function KitchenDisplay() {
   const [orders, setOrders] = useState<any[]>([]);
 
+  const updateStatus = async (orderId: number, status: string) => {
+    await fetch(`/api/orders/${orderId}/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+  };
+
   useEffect(() => {
     fetch('/api/orders/active').then(res => res.json()).then(data => {
       // Filter for kitchen relevant statuses
@@ -57,7 +65,10 @@ export default function KitchenDisplay() {
             </div>
 
             <div className="p-4 bg-gray-50 border-t border-gray-200">
-              <button className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2">
+              <button
+                onClick={() => updateStatus(order.id, 'ready')}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2"
+              >
                 <CheckCircle2 className="w-5 h-5" /> Mark Ready
               </button>
             </div>

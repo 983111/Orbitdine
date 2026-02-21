@@ -18,8 +18,21 @@ export default function OrderTracking() {
   const [status, setStatus] = useState('new');
 
   useEffect(() => {
+    if (!orderId) return;
+
+    fetch(`/api/orders/${orderId}`)
+      .then((res) => res.json())
+      .then((order) => {
+        if (order?.status) {
+          setStatus(order.status);
+        }
+      })
+      .catch(() => {
+        // fallback to realtime updates only
+      });
+
     const socket = io();
-    
+
     socket.on('order_updated', (data) => {
       if (String(data.id) === orderId) {
         setStatus(data.status);
