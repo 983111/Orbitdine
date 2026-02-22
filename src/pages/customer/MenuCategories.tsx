@@ -80,7 +80,7 @@ export default function MenuCategories() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
         <input
           type="text"
-          placeholder="Search category or vibe..."
+          placeholder="Search categories..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full h-11 pl-10 pr-4 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-slate-300 outline-none focus:border-cyan-300"
