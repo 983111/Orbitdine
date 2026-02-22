@@ -1,4 +1,5 @@
-import { BarChart3, TrendingUp, Users, DollarSign } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, DollarSign, Settings, Store, UtensilsCrossed } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function OwnerDashboard() {
   const stats = [
@@ -9,11 +10,26 @@ export default function OwnerDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Owner Overview</h1>
-          <p className="text-gray-500">Real-time insights for The Spice Room</p>
+    <div className="min-h-screen bg-gray-50 px-4 py-6 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
+        <header className="space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Owner Overview</h1>
+              <p className="text-gray-500">Real-time insights for The Spice Room</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link to="/manager/dashboard" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-100">
+                <Store className="w-4 h-4" /> Floor View
+              </Link>
+              <Link to="/manager/kitchen" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-100">
+                <UtensilsCrossed className="w-4 h-4" /> Kitchen
+              </Link>
+              <Link to="/manager/settings" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-100">
+                <Settings className="w-4 h-4" /> Settings
+              </Link>
+            </div>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -34,9 +50,9 @@ export default function OwnerDashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <div className="lg:col-span-2 bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100">
             <h3 className="text-lg font-bold text-gray-900 mb-6">Revenue Trends</h3>
-            <div className="h-64 flex items-end justify-between gap-2">
+            <div className="h-52 md:h-64 flex items-end justify-between gap-2">
               {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
                 <div key={i} className="w-full bg-blue-50 rounded-t-lg relative group">
                   <div 
@@ -46,12 +62,12 @@ export default function OwnerDashboard() {
                 </div>
               ))}
             </div>
-            <div className="flex justify-between mt-4 text-sm text-gray-400">
+            <div className="flex justify-between mt-4 text-xs md:text-sm text-gray-400 overflow-x-auto">
               <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100">
             <h3 className="text-lg font-bold text-gray-900 mb-6">Top Items</h3>
             <div className="space-y-6">
               {[

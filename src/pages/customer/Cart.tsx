@@ -6,6 +6,8 @@ import { formatCurrency } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/components/Toast';
 
+const DEFAULT_GEOFENCE = { lat: 12.9716, lng: 77.5946 };
+
 export default function Cart() {
   const { tableId } = useParams();
   const navigate = useNavigate();
@@ -14,6 +16,8 @@ export default function Cart() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const geofenceEnabled = localStorage.getItem('feature_geofence') === 'true';
+  const geofenceLat = Number(localStorage.getItem('feature_geofence_lat') || DEFAULT_GEOFENCE.lat);
+  const geofenceLng = Number(localStorage.getItem('feature_geofence_lng') || DEFAULT_GEOFENCE.lng);
   const offlineModeEnabled = localStorage.getItem('feature_offline_mode') === 'true';
 
   useEffect(() => {
@@ -41,7 +45,10 @@ export default function Cart() {
         const distance = await new Promise<number>((resolve) => {
           navigator.geolocation.getCurrentPosition(
             (pos) => {
-              const target = { lat: 12.9716, lng: 77.5946 };
+              const target = {
+                lat: Number.isNaN(geofenceLat) ? DEFAULT_GEOFENCE.lat : geofenceLat,
+                lng: Number.isNaN(geofenceLng) ? DEFAULT_GEOFENCE.lng : geofenceLng,
+              };
               const dLat = (pos.coords.latitude - target.lat) * 111139;
               const dLng = (pos.coords.longitude - target.lng) * 111139;
               resolve(Math.sqrt(dLat * dLat + dLng * dLng));
