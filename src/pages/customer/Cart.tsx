@@ -3,21 +3,56 @@ import { motion } from 'motion/react';
 import { Trash2, Plus, Minus } from 'lucide-react';
 import { useCartStore } from '@/store/cart';
 import { formatCurrency } from '@/lib/utils';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useToast } from '@/components/Toast';
 
 export default function Cart() {
   const { tableId } = useParams();
   const navigate = useNavigate();
-  const { items, updateQuantity, removeItem, total, clearCart } = useCartStore();
+  const { items, updateQuantity, removeItem, total, clearCart, hydrateFromServer } = useCartStore();
+  const { pushToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const geofenceEnabled = localStorage.getItem('feature_geofence') === 'true';
+  const offlineModeEnabled = localStorage.getItem('feature_offline_mode') === 'true';
+
+  useEffect(() => {
+    if (!tableId) return;
+    hydrateFromServer(tableId).catch(() => pushToast('Unable to sync cart.', 'error'));
+  }, [tableId]);
 
   const cartTotal = total();
   const tax = cartTotal * 0.10;
   const grandTotal = cartTotal + tax;
 
   const handlePlaceOrder = async () => {
+    if (!navigator.onLine && offlineModeEnabled) {
+      const queue = JSON.parse(localStorage.getItem('offline_orders') || '[]');
+      queue.push({ tableId, items, total: grandTotal, queuedAt: new Date().toISOString() });
+      localStorage.setItem('offline_orders', JSON.stringify(queue));
+      pushToast('You are offline. Order queued and will be submitted when back online.', 'info');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
+      let geofence = { enabled: false, distanceMeters: 0, allowedMeters: 250 };
+      if (geofenceEnabled && navigator.geolocation) {
+        const distance = await new Promise<number>((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const target = { lat: 12.9716, lng: 77.5946 };
+              const dLat = (pos.coords.latitude - target.lat) * 111139;
+              const dLng = (pos.coords.longitude - target.lng) * 111139;
+              resolve(Math.sqrt(dLat * dLat + dLng * dLng));
+            },
+            () => resolve(99999),
+            { timeout: 4000 }
+          );
+        });
+        geofence = { enabled: true, distanceMeters: distance, allowedMeters: 250 };
+      }
+
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -25,17 +60,22 @@ export default function Cart() {
           tableId,
           items,
           total: grandTotal,
-          customerName: "Guest" // Could add a name input field
+          customerName: "Guest",
+          geofence,
         })
       });
       
       const data = await res.json();
       if (data.success) {
-        clearCart();
+        await clearCart(tableId!);
+        pushToast('Order placed successfully.', 'success');
         navigate(`/table/${tableId}/track/${data.orderId}`);
+      } else {
+        pushToast(data.error || 'Unable to place order.', 'error');
       }
     } catch (error) {
       console.error("Order failed", error);
+      pushToast('Order failed. Please try again.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -70,12 +110,12 @@ export default function Cart() {
             layout
             className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-4"
           >
-            <img src={item.image_url} alt={item.name} className="w-20 h-20 rounded-lg object-cover bg-gray-200" />
+            <img src={item.image_url || 'https://placehold.co/160?text=No+Image'} alt={item.name} className="w-20 h-20 rounded-lg object-cover bg-gray-200" />
             
             <div className="flex-1">
               <div className="flex justify-between items-start mb-1">
                 <h3 className="font-bold text-gray-900">{item.name}</h3>
-                <button onClick={() => removeItem(item.id)} className="text-red-500 p-1">
+                <button onClick={() => removeItem(tableId!, item.id)} className="text-red-500 p-1">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -89,14 +129,14 @@ export default function Cart() {
                 
                 <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-1">
                   <button 
-                    onClick={() => updateQuantity(item.id, -1)}
+                    onClick={() => updateQuantity(tableId!, item.id, -1)}
                     className="w-7 h-7 flex items-center justify-center bg-white rounded shadow-sm text-gray-600"
                   >
                     <Minus className="w-3 h-3" />
                   </button>
                   <span className="text-sm font-bold w-4 text-center">{item.quantity}</span>
                   <button 
-                    onClick={() => updateQuantity(item.id, 1)}
+                    onClick={() => updateQuantity(tableId!, item.id, 1)}
                     className="w-7 h-7 flex items-center justify-center bg-white rounded shadow-sm text-gray-600"
                   >
                     <Plus className="w-3 h-3" />

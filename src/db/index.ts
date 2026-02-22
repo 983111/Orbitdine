@@ -81,10 +81,17 @@ if (categoriesCount.count === 0) {
   const beveragesId = insertCategory.run("Beverages", "Elixirs & Potions", "🥤").lastInsertRowid;
 
   insertItem.run(startersId, "Spicy Chicken Wings", "8 pcs, blazing hot...", 299, "https://images.unsplash.com/photo-1608039829572-78524f79c4c7?w=800&q=80", 0, 1);
+  insertItem.run(startersId, "Crispy Calamari", "Golden fried squid rings with aioli", 279, "https://images.unsplash.com/photo-1559737558-2f5a35f4523b?w=800&q=80", 0, 0);
+  insertItem.run(startersId, "Paneer Tikka Bites", "Charred cottage cheese cubes and mint dip", 259, null, 1, 1);
   insertItem.run(mainsId, "Legendary Burger", "Juicy beef, special sauce, crispy lettuce...", 349, "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&q=80", 1, 0);
   insertItem.run(mainsId, "Orbit Pizza", "Pepperoni, cheese, and cosmic dust", 499, "https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?w=800&q=80", 0, 0);
+  insertItem.run(mainsId, "Smoky Alfredo Pasta", "Creamy sauce with grilled mushrooms", 389, "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?w=800&q=80", 0, 0);
+  insertItem.run(mainsId, "Dragon Noodles", "Wok tossed noodles with chili garlic", 329, null, 0, 1);
   insertItem.run(dessertsId, "Galaxy Cake", "Chocolate cake with stardust sprinkles", 199, "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800&q=80", 1, 0);
+  insertItem.run(dessertsId, "Molten Lava Cup", "Warm gooey chocolate center", 219, "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=800&q=80", 0, 0);
   insertItem.run(beveragesId, "Nebula Mojito", "Mint, lime, fizz and a glowing finish", 149, "https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=800&q=80", 0, 0);
+  insertItem.run(beveragesId, "Cold Brew Tonic", "Citrus tonic with smooth cold brew", 169, "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=80", 0, 0);
+  insertItem.run(beveragesId, "Mango Lassi", "Classic yogurt shake with mango pulp", 129, null, 0, 0);
 
   for (let i = 1; i <= 10; i++) {
     insertTable.run(i, "available");

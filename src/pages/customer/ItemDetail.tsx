@@ -4,11 +4,13 @@ import { motion } from 'motion/react';
 import { Flame, Star, Minus, Plus } from 'lucide-react';
 import { useCartStore } from '@/store/cart';
 import { formatCurrency, cn } from '@/lib/utils';
+import { useToast } from '@/components/Toast';
 
 export default function ItemDetail() {
   const { tableId, itemId } = useParams();
   const navigate = useNavigate();
   const addItem = useCartStore((state) => state.addItem);
+  const { pushToast } = useToast();
   
   const [item, setItem] = useState<any>(null);
   const [quantity, setQuantity] = useState(1);
@@ -33,19 +35,23 @@ export default function ItemDetail() {
   if (!item) return <div className="p-8 text-center">Loading...</div>;
 
   const handleAddToCart = () => {
-    addItem({
+    addItem(tableId!, {
       ...item,
       quantity,
       notes: `Spice: ${spiceLevel}/5. ${notes}`
-    });
-    navigate(-1);
+    })
+      .then(() => {
+        pushToast(`${item.name} added to cart.`, 'success');
+        navigate(-1);
+      })
+      .catch(() => pushToast('Could not update cart.', 'error'));
   };
 
   return (
     <div className="pb-24">
-      <div 
+      <div
         className="h-64 bg-gray-200 bg-cover bg-center relative"
-        style={{ backgroundImage: `url(${item.image_url})` }}
+        style={{ backgroundImage: `url(${item.image_url || 'https://placehold.co/800x500?text=OrbitDine'})` }}
       />
       
       <div className="px-4 py-6 space-y-6">

@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { Plus, Flame, Star } from 'lucide-react';
 import { useCartStore } from '@/store/cart';
 import { formatCurrency } from '@/lib/utils';
+import { useToast } from '@/components/Toast';
 
 interface MenuItem {
   id: number;
@@ -19,6 +20,7 @@ export default function MenuItems() {
   const { tableId, categoryId } = useParams();
   const navigate = useNavigate();
   const addItem = useCartStore((state) => state.addItem);
+  const { pushToast } = useToast();
   const [items, setItems] = useState<MenuItem[]>([]);
   const [categoryName, setCategoryName] = useState('');
 
@@ -31,7 +33,8 @@ export default function MenuItems() {
           setCategoryName(category.name);
           setItems(category.items);
         }
-      });
+      })
+      .catch(() => pushToast('Failed to load menu items.', 'error'));
   }, [categoryId]);
 
   return (
@@ -49,7 +52,7 @@ export default function MenuItems() {
           >
             <div 
               className="h-48 bg-gray-200 bg-cover bg-center relative"
-              style={{ backgroundImage: `url(${item.image_url})` }}
+                style={{ backgroundImage: `url(${item.image_url || 'https://placehold.co/800x500?text=OrbitDine'})` }}
               onClick={() => navigate(`/table/${tableId}/item/${item.id}`)}
             >
               {item.is_top_quest && (
@@ -77,7 +80,9 @@ export default function MenuItems() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    addItem({ ...item, quantity: 1 });
+                    addItem(tableId!, { ...item, quantity: 1 })
+                      .then(() => pushToast(`${item.name} added to cart.`, 'success'))
+                      .catch(() => pushToast('Could not update cart. Please retry.', 'error'));
                   }}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium active:scale-95 transition-transform"
                 >

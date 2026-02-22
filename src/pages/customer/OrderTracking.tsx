@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { CheckCircle2, ChefHat, Bell, Gamepad2 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/components/Toast';
 
 const steps = [
   { id: 'new', label: 'Order Received', icon: CheckCircle2, color: 'text-blue-500' },
@@ -15,6 +16,7 @@ const steps = [
 export default function OrderTracking() {
   const { tableId, orderId } = useParams();
   const navigate = useNavigate();
+  const { pushToast } = useToast();
   const [status, setStatus] = useState('new');
 
   useEffect(() => {
@@ -127,7 +129,7 @@ export default function OrderTracking() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ type: 'bill' })
               });
-              alert('Bill requested! A waiter will be with you shortly.');
+              pushToast('Bill requested! A waiter will be with you shortly.', 'success');
             }}
             className="w-full bg-white border-2 border-gray-200 text-gray-700 font-bold py-4 rounded-xl hover:bg-gray-50 transition-colors"
           >

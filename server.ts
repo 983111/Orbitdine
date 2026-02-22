@@ -7,6 +7,8 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 import db from "./src/db/index.js";
 
+const cartSessions = new Map<string, Record<string, any[]>>();
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function startServer() {
@@ -16,6 +18,8 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json());
+
+  const getSessionId = (req: any) => String(req.headers['x-session-id'] || 'anon');
 
   // --- API Routes ---
 
@@ -47,11 +51,41 @@ async function startServer() {
     }
   });
 
+  app.get('/api/cart/:tableId', (req, res) => {
+    const sessionId = getSessionId(req);
+    const tableId = String(req.params.tableId);
+    const session = cartSessions.get(sessionId) || {};
+    res.json({ items: session[tableId] || [] });
+  });
+
+  app.put('/api/cart/:tableId', (req, res) => {
+    const sessionId = getSessionId(req);
+    const tableId = String(req.params.tableId);
+    const session = cartSessions.get(sessionId) || {};
+    session[tableId] = Array.isArray(req.body?.items) ? req.body.items : [];
+    cartSessions.set(sessionId, session);
+    res.json({ success: true });
+  });
+
+  app.delete('/api/cart/:tableId', (req, res) => {
+    const sessionId = getSessionId(req);
+    const tableId = String(req.params.tableId);
+    const session = cartSessions.get(sessionId) || {};
+    delete session[tableId];
+    cartSessions.set(sessionId, session);
+    res.json({ success: true });
+  });
+
   // Create Order
   app.post("/api/orders", (req, res) => {
-    const { tableId, items, total, customerName } = req.body;
+    const { tableId, items, total, customerName, geofence } = req.body;
     
     try {
+      if (geofence?.enabled && geofence.distanceMeters > geofence.allowedMeters) {
+        res.status(403).json({ error: 'You appear to be outside the restaurant geofence.' });
+        return;
+      }
+
       const insertOrder = db.prepare(
         "INSERT INTO orders (table_id, status, total_amount, customer_name) VALUES (?, ?, ?, ?)"
       );
@@ -85,6 +119,31 @@ async function startServer() {
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Failed to create order" });
+    }
+  });
+
+  app.get('/api/orders/:id/print', (req, res) => {
+    const { id } = req.params;
+    try {
+      const order = db.prepare(`
+        SELECT o.*, t.number as table_number
+        FROM orders o JOIN tables t ON o.table_id = t.id WHERE o.id = ?
+      `).get(id) as any;
+
+      if (!order) {
+        res.status(404).json({ error: 'Order not found' });
+        return;
+      }
+
+      const items = db.prepare(`
+        SELECT oi.*, mi.name
+        FROM order_items oi JOIN menu_items mi ON oi.menu_item_id = mi.id
+        WHERE oi.order_id = ?
+      `).all(id);
+
+      res.json({ ...order, items });
+    } catch {
+      res.status(500).json({ error: 'Failed to load printable order' });
     }
   });
 

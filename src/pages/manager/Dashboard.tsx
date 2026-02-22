@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { motion } from 'motion/react';
-import { CheckCircle2, Clock, AlertCircle, Printer } from 'lucide-react';
-import { cn, formatCurrency } from '@/lib/utils';
+import { Printer } from 'lucide-react';
+import { cn, formatCurrency, timeAgo } from '@/lib/utils';
+import { useToast } from '@/components/Toast';
 
 interface Order {
   id: number;
@@ -23,11 +24,12 @@ export default function ManagerDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
   const [activeTab, setActiveTab] = useState<'floor' | 'orders'>('floor');
+  const { pushToast } = useToast();
 
   useEffect(() => {
     // Initial Fetch
-    fetch('/api/orders/active').then(res => res.json()).then(setOrders);
-    fetch('/api/tables').then(res => res.json()).then(setTables);
+    fetch('/api/orders/active').then(res => res.json()).then(setOrders).catch(() => pushToast('Failed to fetch active orders.', 'error'));
+    fetch('/api/tables').then(res => res.json()).then(setTables).catch(() => pushToast('Failed to fetch table status.', 'error'));
 
     // Real-time updates
     const socket = io();
@@ -67,15 +69,31 @@ export default function ManagerDashboard() {
     });
   };
 
+  const printKitchenTicket = async (orderId: number) => {
+    try {
+      const res = await fetch(`/api/orders/${orderId}/print`);
+      const order = await res.json();
+      const win = window.open('', '_blank', 'width=420,height=640');
+      if (!win) return;
+      const items = order.items.map((item: any) => `<li>${item.quantity} x ${item.name}</li>`).join('');
+      win.document.write(`<h2>OrbitDine Kitchen Ticket</h2><p>Order #${order.id} | Table ${order.table_number}</p><ul>${items}</ul>`);
+      win.document.close();
+      win.print();
+      pushToast(`Print queued for order #${orderId}.`, 'success');
+    } catch {
+      pushToast('Printing failed for this order.', 'error');
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <div className="flex gap-2 bg-white p-1 rounded-lg border border-gray-200">
+        <div className="flex gap-2 bg-white p-1 rounded-lg border border-gray-200 w-full sm:w-auto">
           <button
             onClick={() => setActiveTab('floor')}
             className={cn(
-              "px-4 py-2 rounded-md text-sm font-medium transition-colors",
+              "px-4 py-2 rounded-md text-sm font-medium transition-colors flex-1 sm:flex-initial",
               activeTab === 'floor' ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-gray-50"
             )}
           >
@@ -84,7 +102,7 @@ export default function ManagerDashboard() {
           <button
             onClick={() => setActiveTab('orders')}
             className={cn(
-              "px-4 py-2 rounded-md text-sm font-medium transition-colors",
+              "px-4 py-2 rounded-md text-sm font-medium transition-colors flex-1 sm:flex-initial",
               activeTab === 'orders' ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-gray-50"
             )}
           >
@@ -127,7 +145,7 @@ export default function ManagerDashboard() {
               <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                 <div>
                   <h3 className="font-bold text-gray-900">Table {order.table_number}</h3>
-                  <p className="text-xs text-gray-500">#{order.id} • {new Date(order.created_at).toLocaleTimeString()}</p>
+                  <p className="text-xs text-gray-500">#{order.id} • {timeAgo(order.created_at)}</p>
                 </div>
                 <span className={cn(
                   "px-2 py-1 rounded-full text-xs font-bold uppercase",
@@ -179,7 +197,7 @@ export default function ManagerDashboard() {
                   </button>
                 )}
                 
-                <button className="p-2 bg-white border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
+                <button onClick={() => printKitchenTicket(order.id)} className="p-2 bg-white border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
                   <Printer className="w-5 h-5" />
                 </button>
               </div>
