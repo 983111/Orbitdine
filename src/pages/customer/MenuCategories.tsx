@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { ChevronRight, Search } from 'lucide-react';
+import { ChevronRight, Search, AlertTriangle } from 'lucide-react';
 
 interface Category {
   id: number;
   name: string;
   description: string;
   icon: string;
+  items?: { id: number }[];
 }
 
 export default function MenuCategories() {
@@ -16,68 +17,103 @@ export default function MenuCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    let active = true;
+
     fetch('/api/menu')
-      .then(res => res.json())
-      .then(data => {
-        setCategories(data);
-        setLoading(false);
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error('Could not load menu');
+        }
+        return res.json();
       })
-      .catch(err => console.error(err));
+      .then((data) => {
+        if (!active) return;
+        setCategories(data);
+      })
+      .catch(() => {
+        if (!active) return;
+        setError('Unable to load menu right now. Please try again.');
+      })
+      .finally(() => {
+        if (!active) return;
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  if (loading) return <div className="p-8 text-center">Loading menu...</div>;
-
-  const filteredCategories = categories.filter((category) => {
+  const filteredCategories = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return true;
-
-    return (
-      category.name.toLowerCase().includes(q) ||
-      category.description.toLowerCase().includes(q)
+    if (!q) return categories;
+    return categories.filter((category) =>
+      `${category.name} ${category.description}`.toLowerCase().includes(q),
     );
-  });
+  }, [categories, query]);
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-slate-200">
+        Loading menu...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-2xl border border-rose-300/30 bg-rose-400/10 p-6 text-rose-100 flex gap-3">
+        <AlertTriangle className="w-5 h-5 mt-0.5" />
+        <p>{error}</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="px-4 py-6 space-y-6">
+    <div className="space-y-5">
+      <h2 className="text-2xl font-bold">Choose a category</h2>
+
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-        <input 
-          type="text" 
-          placeholder="Search dishes..." 
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+        <input
+          type="text"
+          placeholder="Search category or vibe..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 bg-gray-100 rounded-xl border-none focus:ring-2 focus:ring-blue-500 outline-none"
+          className="w-full h-11 pl-10 pr-4 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-slate-300 outline-none focus:border-cyan-300"
         />
       </div>
 
-      <div className="space-y-4">
+      <div className="grid gap-3">
         {filteredCategories.map((category, index) => (
-          <motion.div
+          <motion.button
             key={category.id}
-            initial={{ x: -20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ delay: index * 0.1 }}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.06 }}
             onClick={() => navigate(`/table/${tableId}/category/${category.id}`)}
-            className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer active:bg-gray-50"
+            className="text-left rounded-2xl border border-white/15 bg-white/10 p-4 flex items-center gap-4 hover:bg-white/15 transition"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-2xl">
-                {category.icon}
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900">{category.name}</h3>
-                <p className="text-sm text-gray-500">{category.description}</p>
-              </div>
+            <div className="w-12 h-12 rounded-xl bg-cyan-300/20 flex items-center justify-center text-2xl">
+              {category.icon}
             </div>
-            <ChevronRight className="w-5 h-5 text-gray-400" />
-          </motion.div>
+            <div className="flex-1">
+              <p className="font-semibold">{category.name}</p>
+              <p className="text-sm text-slate-300">{category.description}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-slate-300 mb-1">{category.items?.length ?? 0} items</p>
+              <ChevronRight className="w-4 h-4" />
+            </div>
+          </motion.button>
         ))}
 
         {filteredCategories.length === 0 && (
-          <div className="text-center text-gray-500 bg-white border border-gray-100 rounded-xl p-8">
-            No matching categories found.
+          <div className="rounded-2xl border border-white/15 bg-white/5 p-6 text-center text-slate-300">
+            No categories match your search.
           </div>
         )}
       </div>
