@@ -7,15 +7,44 @@ import path from "path";
 import { fileURLToPath } from "url";
 import db from "./src/db/index.js";
 import cartCache from "./src/cache/redis.js";
-import { signJwt, verifyJwt, verifyPassword } from "./src/auth/security.js";
+import admin from "firebase-admin";
+import fs from "node:fs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type Role = "manager" | "owner";
 
+const loadFirebaseServiceAccount = () => {
+  const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+
+  if (serviceAccountPath) {
+    const raw = fs.readFileSync(serviceAccountPath, "utf-8");
+    return JSON.parse(raw);
+  }
+
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+
+  if (!projectId || !clientEmail || !privateKey) {
+    throw new Error(
+      "Missing Firebase Admin credentials. Set FIREBASE_SERVICE_ACCOUNT_PATH or FIREBASE_PROJECT_ID/FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY.",
+    );
+  }
+
+  return { projectId, clientEmail, privateKey };
+};
+
 async function startServer() {
   await db.init();
   await cartCache.init();
+
+  if (!admin.apps.length) {
+    const serviceAccount = loadFirebaseServiceAccount();
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  }
 
   const app = express();
   const httpServer = createServer(app);
@@ -26,70 +55,29 @@ async function startServer() {
 
   const getSessionId = (req: any) => String(req.headers["x-session-id"] || "anon");
 
-  const requireAuth = (roles?: Role[]) => (req: any, res: any, next: any) => {
+  const requireAuth = (roles?: Role[]) => async (req: any, res: any, next: any) => {
     const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    const idToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
-    if (!token) {
-      res.status(401).json({ error: "Missing access token." });
-      return;
-    }
-
-    const payload = verifyJwt(token);
-    if (!payload) {
-      res.status(401).json({ error: "Invalid or expired token." });
-      return;
-    }
-
-    if (roles && !roles.includes(payload.role as Role)) {
-      res.status(403).json({ error: "Insufficient permissions." });
-      return;
-    }
-
-    req.user = payload;
-    next();
-  };
-
-  app.post("/api/auth/login", async (req, res) => {
-    const { username, password } = req.body ?? {};
-
-    if (!username || !password) {
-      res.status(400).json({ error: "Username and password are required." });
+    if (!idToken) {
+      res.status(401).json({ error: "No token provided." });
       return;
     }
 
     try {
-      const user = await db.one<{ id: number; username: string; password_hash: string; role: Role }>(
-        "SELECT id, username, password_hash, role FROM users WHERE username = $1",
-        [username],
-      );
+      const decodedToken = await admin.auth().verifyIdToken(idToken);
 
-      if (!user) {
-        res.status(401).json({ error: "Invalid username or password." });
+      if (roles && !roles.includes(decodedToken.role as Role)) {
+        res.status(403).json({ error: "Insufficient permissions." });
         return;
       }
 
-      const valid = await verifyPassword(password, user.password_hash);
-      if (!valid) {
-        res.status(401).json({ error: "Invalid username or password." });
-        return;
-      }
-
-      const token = signJwt({ sub: String(user.id), role: user.role, username: user.username });
-
-      res.json({
-        token,
-        user: {
-          id: user.id,
-          username: user.username,
-          role: user.role,
-        },
-      });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Failed to login." });
+      req.user = decodedToken;
+      next();
+    } catch {
+      res.status(401).json({ error: "Invalid token." });
     }
-  });
+  };
 
   app.get("/api/menu", async (_req, res) => {
     try {

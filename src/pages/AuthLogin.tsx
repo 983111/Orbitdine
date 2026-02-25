@@ -1,16 +1,9 @@
 import { FormEvent, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LockKeyhole, ShieldCheck } from 'lucide-react';
-import type { AuthUser } from '@/lib/sessionAuth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { saveAuthSession } from '@/lib/sessionAuth';
-
-const isAuthUser = (value: unknown): value is AuthUser => {
-  if (!value || typeof value !== 'object') return false;
-  const candidate = value as Partial<AuthUser>;
-  return typeof candidate.id === 'number'
-    && typeof candidate.username === 'string'
-    && (candidate.role === 'manager' || candidate.role === 'owner');
-};
 
 export default function AuthLogin() {
   const navigate = useNavigate();
@@ -26,34 +19,24 @@ export default function AuthLogin() {
     setError(null);
 
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+      const userCredential = await signInWithEmailAndPassword(auth, username, password);
+      const idTokenResult = await userCredential.user.getIdTokenResult();
+      const role = idTokenResult.claims.role;
+
+      if (role !== 'manager' && role !== 'owner') {
+        throw new Error('Your account is missing a valid staff role claim.');
+      }
+
+      saveAuthSession(idTokenResult.token, {
+        id: userCredential.user.uid,
+        username: userCredential.user.email ?? username,
+        role,
       });
 
-      const raw = await res.text();
-      let data: { error?: string; token?: string; user?: unknown } = {};
-      if (raw) {
-        try {
-          data = JSON.parse(raw);
-        } catch {
-          throw new Error('Login service returned an invalid response. Please try again.');
-        }
-      }
-
-      if (!res.ok) {
-        throw new Error(data.error ?? 'Login failed');
-      }
-
-      if (!data.token || !isAuthUser(data.user)) {
-        throw new Error('Login failed: missing auth token.');
-      }
-
-      saveAuthSession(data.token, data.user);
-      navigate((location.state as any)?.from ?? '/manager/dashboard', { replace: true });
-    } catch (e) {
-      setError((e as Error).message);
+      const fallbackPath = role === 'owner' ? '/owner' : '/manager/dashboard';
+      navigate((location.state as any)?.from ?? fallbackPath, { replace: true });
+    } catch {
+      setError('Failed to login with Firebase. Check your email, password, and role claim.');
     } finally {
       setLoading(false);
     }
@@ -69,7 +52,7 @@ export default function AuthLogin() {
           </p>
           <h1 className="mb-4 text-4xl font-semibold leading-tight">Securely access the manager and owner console.</h1>
           <p className="max-w-md text-sm text-slate-300">
-            Monitor tables, control kitchen flow, and manage settings in one place. Sign in with your staff credentials to continue.
+            Monitor tables, control kitchen flow, and manage settings in one place. Sign in with your Firebase staff account to continue.
           </p>
         </section>
 
@@ -84,12 +67,12 @@ export default function AuthLogin() {
 
           <div className="space-y-4">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">Username</label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Email</label>
               <input
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                placeholder="Enter your username"
+                placeholder="name@company.com"
                 autoComplete="username"
                 required
               />
