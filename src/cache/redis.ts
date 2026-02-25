@@ -1,29 +1,17 @@
-type RedisClientLike = {
-  connect: () => Promise<void>;
-  get: (key: string) => Promise<string | null>;
-  set: (key: string, value: string, opts?: { EX?: number }) => Promise<any>;
-  del: (key: string) => Promise<number>;
-};
-
-const dynamicImport = (moduleName: string) => new Function("m", "return import(m)")(moduleName) as Promise<any>;
+import { createClient, RedisClientType } from "redis";
 
 class CartCache {
-  private client: RedisClientLike | null = null;
+  private client: RedisClientType | null = null;
 
   async init() {
-    try {
-      const { createClient } = await dynamicImport("redis");
-      const redisUrl = process.env.REDIS_URL;
+    const redisUrl = process.env.REDIS_URL;
 
-      if (!redisUrl) {
-        throw new Error("Missing REDIS_URL environment variable.");
-      }
-
-      this.client = createClient({ url: redisUrl });
-      this.client.connect();
-    } catch (error) {
-      throw new Error(`Redis client is required but unavailable. Install 'redis' and set REDIS_URL. Root cause: ${String(error)}`);
+    if (!redisUrl) {
+      throw new Error("Missing REDIS_URL environment variable.");
     }
+
+    this.client = createClient({ url: redisUrl });
+    await this.client.connect();
   }
 
   private key(sessionId: string, tableId: string) {
