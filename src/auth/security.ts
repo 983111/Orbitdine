@@ -1,6 +1,5 @@
 import crypto from "node:crypto";
-
-const dynamicImport = (moduleName: string) => new Function("m", "return import(m)")(moduleName) as Promise<any>;
+import bcrypt from "bcryptjs";
 
 const toBase64Url = (input: string | Buffer) =>
   Buffer.from(input)
@@ -67,12 +66,7 @@ const fallbackHash = (password: string, salt?: string) => {
 };
 
 export const hashPassword = async (password: string) => {
-  try {
-    const bcrypt = await dynamicImport("bcryptjs");
-    return bcrypt.hash(password, 12);
-  } catch {
-    return fallbackHash(password);
-  }
+  return bcrypt.hash(password, 12);
 };
 
 export const verifyPassword = async (password: string, storedHash: string) => {
@@ -81,10 +75,5 @@ export const verifyPassword = async (password: string, storedHash: string) => {
     return fallbackHash(password, salt) === storedHash;
   }
 
-  try {
-    const bcrypt = await dynamicImport("bcryptjs");
-    return bcrypt.compare(password, storedHash);
-  } catch {
-    return false;
-  }
+  return bcrypt.compare(password, storedHash);
 };
