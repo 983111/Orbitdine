@@ -268,7 +268,7 @@ async function startServer() {
     }
   });
 
-  app.get("/api/orders/:id", requireAuth(["manager", "owner"]), async (req, res) => {
+  app.get("/api/orders/:id", async (req, res) => {
     const { id } = req.params;
 
     try {

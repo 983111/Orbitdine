@@ -1,16 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { CheckCircle2, ChefHat, Bell, Gamepad2 } from 'lucide-react';
+import { CheckCircle2, ChefHat, Bell, Gamepad2, ReceiptText } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/Toast';
 
 const steps = [
-  { id: 'new', label: 'Order Received', icon: CheckCircle2, color: 'text-blue-500' },
-  { id: 'preparing', label: 'Kitchen Preparing', icon: ChefHat, color: 'text-orange-500' },
-  { id: 'ready', label: 'Ready to Serve', icon: Bell, color: 'text-green-500' },
-  { id: 'completed', label: 'Served', icon: CheckCircle2, color: 'text-gray-400' },
+  { id: 'new', label: 'Order received', helper: 'Your order has been confirmed.', icon: CheckCircle2, color: 'text-cyan-300' },
+  { id: 'preparing', label: 'Kitchen preparing', helper: 'Chef is currently preparing your meal.', icon: ChefHat, color: 'text-amber-300' },
+  { id: 'ready', label: 'Ready to serve', helper: 'Your meal is ready and will be served shortly.', icon: Bell, color: 'text-emerald-300' },
+  { id: 'completed', label: 'Served', helper: 'Order delivered to your table.', icon: CheckCircle2, color: 'text-slate-200' },
 ];
 
 export default function OrderTracking() {
@@ -18,19 +18,29 @@ export default function OrderTracking() {
   const navigate = useNavigate();
   const { pushToast } = useToast();
   const [status, setStatus] = useState('new');
+  const [loadingOrder, setLoadingOrder] = useState(true);
 
   useEffect(() => {
     if (!orderId) return;
 
+    setLoadingOrder(true);
     fetch(`/api/orders/${orderId}`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error('Unable to load order details.');
+        }
+        return res.json();
+      })
       .then((order) => {
         if (order?.status) {
           setStatus(order.status);
         }
       })
       .catch(() => {
-        // fallback to realtime updates only
+        pushToast('Unable to load current status, listening for live updates.', 'info');
+      })
+      .finally(() => {
+        setLoadingOrder(false);
       });
 
     const socket = io();
@@ -44,99 +54,106 @@ export default function OrderTracking() {
     return () => {
       socket.disconnect();
     };
-  }, [orderId]);
+  }, [orderId, pushToast]);
 
-  const currentStepIndex = steps.findIndex(s => s.id === status);
+  const currentStepIndex = useMemo(() => {
+    const stepIndex = steps.findIndex((s) => s.id === status);
+    return stepIndex >= 0 ? stepIndex : 0;
+  }, [status]);
 
   return (
-    <div className="px-4 py-8">
-      <div className="text-center mb-8">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"
-        >
-          <CheckCircle2 className="w-10 h-10 text-green-600" />
-        </motion.div>
-        <h1 className="text-2xl font-bold text-gray-900">Quest Accepted!</h1>
-        <p className="text-gray-500">Order #{orderId} • Table {tableId}</p>
+    <div className="px-1 py-4">
+      <div className="mb-6 rounded-2xl border border-white/10 bg-white/10 p-5 text-white shadow-lg backdrop-blur-md">
+        <div className="mb-4 flex items-center justify-center">
+          <motion.div
+            initial={{ scale: 0.7, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-400/20"
+          >
+            <CheckCircle2 className="h-9 w-9 text-emerald-300" />
+          </motion.div>
+        </div>
+        <h1 className="text-center text-2xl font-bold">Order Tracking</h1>
+        <p className="mt-1 text-center text-sm text-slate-200">Order #{orderId} • Table {tableId}</p>
       </div>
 
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
-        <div className="space-y-8 relative">
-          {/* Vertical Line */}
-          <div className="absolute left-6 top-2 bottom-2 w-0.5 bg-gray-100" />
+      <div className="mb-6 rounded-2xl border border-white/10 bg-[#0f172a]/80 p-5 text-white shadow-lg">
+        <div className="relative space-y-6">
+          <div className="absolute bottom-3 left-[1.15rem] top-3 w-px bg-slate-600" />
 
           {steps.map((step, index) => {
             const isActive = index <= currentStepIndex;
             const isCurrent = index === currentStepIndex;
 
             return (
-              <div key={step.id} className="relative flex items-center gap-4">
-                <div className={cn(
-                  "w-12 h-12 rounded-full flex items-center justify-center z-10 transition-colors duration-500",
-                  isActive ? "bg-white border-2 border-blue-500" : "bg-gray-100 border-2 border-transparent"
-                )}>
-                  <step.icon className={cn(
-                    "w-6 h-6",
-                    isActive ? step.color : "text-gray-400"
-                  )} />
+              <div key={step.id} className="relative flex items-start gap-3">
+                <div
+                  className={cn(
+                    'z-10 flex h-9 w-9 items-center justify-center rounded-full border text-sm transition-colors',
+                    isActive ? 'border-cyan-300 bg-cyan-300/10' : 'border-slate-600 bg-slate-800',
+                  )}
+                >
+                  <step.icon className={cn('h-4.5 w-4.5', isActive ? step.color : 'text-slate-400')} />
                 </div>
-                <div>
-                  <h3 className={cn(
-                    "font-bold transition-colors duration-300",
-                    isActive ? "text-gray-900" : "text-gray-400"
-                  )}>
-                    {step.label}
-                  </h3>
+                <div className="pt-0.5">
+                  <h3 className={cn('text-sm font-semibold', isActive ? 'text-white' : 'text-slate-400')}>{step.label}</h3>
+                  <p className={cn('text-xs', isActive ? 'text-slate-300' : 'text-slate-500')}>{step.helper}</p>
                   {isCurrent && (
-                    <p className="text-xs text-blue-500 font-medium animate-pulse">
-                      In Progress...
-                    </p>
+                    <p className="mt-1 text-xs font-medium text-cyan-300 animate-pulse">In progress...</p>
                   )}
                 </div>
               </div>
             );
           })}
         </div>
+
+        {loadingOrder && <p className="mt-5 text-xs text-slate-400">Checking latest order status...</p>}
       </div>
 
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-6 text-white text-center shadow-lg mb-6">
-        <Gamepad2 className="w-12 h-12 mx-auto mb-4 opacity-80" />
-        <h3 className="text-xl font-bold mb-2">Bored Waiting?</h3>
-        <p className="text-purple-100 mb-6">Play games to win discounts while our chefs prepare your meal!</p>
+      <div className="mb-6 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 p-6 text-center text-white shadow-lg">
+        <Gamepad2 className="mx-auto mb-3 h-10 w-10 opacity-85" />
+        <h3 className="text-lg font-bold">Make your wait fun</h3>
+        <p className="mb-5 mt-1 text-sm text-violet-100">Play quick games while your order is being prepared.</p>
         <button
           onClick={() => navigate(`/table/${tableId}/games`)}
-          className="bg-white text-purple-600 font-bold py-3 px-8 rounded-xl shadow-sm hover:bg-purple-50 transition-colors"
+          className="rounded-xl bg-white px-7 py-2.5 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50"
         >
           Enter Game Zone
         </button>
       </div>
 
-      <div className="space-y-4">
-        {status === 'completed' ? (
-          <button
-            onClick={() => navigate(`/table/${tableId}/feedback`)}
-            className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 rounded-xl shadow-md transition-transform active:scale-95"
-          >
-            Rate Your Experience
-          </button>
-        ) : (
-          <button
-            onClick={() => {
-              fetch(`/api/tables/${tableId}/request`, {
+      {status === 'completed' ? (
+        <button
+          onClick={() => navigate(`/table/${tableId}/feedback`)}
+          className="w-full rounded-xl bg-amber-500 py-3.5 font-semibold text-white shadow-md transition hover:bg-amber-600"
+        >
+          Rate your experience
+        </button>
+      ) : (
+        <button
+          onClick={async () => {
+            try {
+              const response = await fetch(`/api/tables/${tableId}/request`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ type: 'bill' })
+                body: JSON.stringify({ type: 'bill' }),
               });
+
+              if (!response.ok) {
+                throw new Error();
+              }
+
               pushToast('Bill requested! A waiter will be with you shortly.', 'success');
-            }}
-            className="w-full bg-white border-2 border-gray-200 text-gray-700 font-bold py-4 rounded-xl hover:bg-gray-50 transition-colors"
-          >
-            Request Bill
-          </button>
-        )}
-      </div>
+            } catch {
+              pushToast('Unable to request bill right now. Please try again.', 'error');
+            }
+          }}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-500 bg-slate-900/80 py-3.5 font-semibold text-slate-100 transition hover:bg-slate-800"
+        >
+          <ReceiptText className="h-4 w-4" />
+          Request bill
+        </button>
+      )}
     </div>
   );
 }
