@@ -41,6 +41,30 @@ const hashPassword = (password: string, salt?: string) => {
   return `${effectiveSalt}:${hash}`;
 };
 
+const encodeCredential = (value: string) => {
+  try {
+    return encodeURIComponent(decodeURIComponent(value));
+  } catch {
+    return encodeURIComponent(value);
+  }
+};
+
+const normalizeDatabaseUrl = (rawConnectionString: string) => {
+  const trimmed = rawConnectionString.trim();
+  const withProtocol = trimmed.startsWith("//") ? `postgresql:${trimmed}` : trimmed;
+  const url = new URL(withProtocol);
+
+  if (url.username) {
+    url.username = encodeCredential(url.username);
+  }
+
+  if (url.password) {
+    url.password = encodeCredential(url.password);
+  }
+
+  return url.toString();
+};
+
 class Database {
   private pool: pg.Pool | null = null;
 
@@ -51,7 +75,7 @@ class Database {
       throw new Error("Missing DATABASE_URL environment variable.");
     }
 
-    this.pool = new Pool({ connectionString });
+    this.pool = new Pool({ connectionString: normalizeDatabaseUrl(connectionString) });
 
     await this.query(`
       CREATE TABLE IF NOT EXISTS categories (
