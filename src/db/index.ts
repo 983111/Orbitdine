@@ -1,36 +1,14 @@
 import crypto from "node:crypto";
+import pg from "pg";
 
-type QueryResult<T = any> = { rows: T[] };
-
-type PgPoolLike = {
-  query: (text: string, values?: any[]) => Promise<QueryResult>;
-};
-
-const dynamicImport = (moduleName: string) => new Function("m", "return import(m)")(moduleName) as Promise<any>;
-
-async function createPool(): Promise<PgPoolLike> {
-  try {
-    const { Pool } = await dynamicImport("pg");
-    const connectionString = process.env.DATABASE_URL;
-
-    if (!connectionString) {
-      throw new Error("Missing DATABASE_URL environment variable.");
-    }
-
-    return new Pool({ connectionString });
-  } catch (error) {
-    throw new Error(
-      `PostgreSQL driver is required but unavailable. Install 'pg' and set DATABASE_URL. Root cause: ${String(error)}`,
-    );
-  }
-}
+const { Pool } = pg;
 
 const seedData = {
   categories: [
-    ["Starters", "The First Trial", "🍟"],
-    ["Main Course", "The Grand Feast", "🍔"],
-    ["Desserts", "Sweet Victory", "🍰"],
-    ["Beverages", "Elixirs & Potions", "🥤"],
+    ["Starters", "The First Trial", "此"],
+    ["Main Course", "The Grand Feast", "鵠"],
+    ["Desserts", "Sweet Victory", "魂"],
+    ["Beverages", "Elixirs & Potions", "･､"],
   ],
 };
 
@@ -64,10 +42,16 @@ const hashPassword = (password: string, salt?: string) => {
 };
 
 class Database {
-  private pool: PgPoolLike | null = null;
+  private pool: pg.Pool | null = null;
 
   async init() {
-    this.pool = await createPool();
+    const connectionString = process.env.DATABASE_URL;
+
+    if (!connectionString) {
+      throw new Error("Missing DATABASE_URL environment variable.");
+    }
+
+    this.pool = new Pool({ connectionString });
 
     await this.query(`
       CREATE TABLE IF NOT EXISTS categories (
